@@ -41,13 +41,7 @@ dist/
 4. 確認 IIS 已安裝 URL Rewrite
 5. 開啟網站測試首頁、CSS、JS、圖片與重新整理頁面
 
-若部署在 IIS 子目錄，例如 `https://example.com/kaohsiung/`，請將 `vite.config.js` 的 `base` 改成：
-
-```js
-base: '/kaohsiung/',
-```
-
-再重新執行 `npm run build`。
+目前 `vite.config.js` 使用 `base: './'`，因此可部署在 IIS 根站台、分站或虛擬目錄中。若改成 `base: '/'`，部署到分站時可能會讓 CSS / JS 從網站根目錄 `/assets/` 載入，造成 404。
 
 ## Gemini AI 設定
 
@@ -85,6 +79,7 @@ project-root/
 - 將 inline CSS 動畫整理到 `src/styles/index.css`
 - 將 Gemini API Key 改為使用環境變數
 - 加入 IIS `web.config`
+- 使用相對資源路徑支援 IIS 分站部署
 - 驗證可執行 `npm run build`
 
 ## 已知限制
