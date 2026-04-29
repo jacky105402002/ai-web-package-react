@@ -43,6 +43,12 @@ dist/
 
 目前 `vite.config.js` 使用 `base: './'`，因此可部署在 IIS 根站台、分站或虛擬目錄中。若改成 `base: '/'`，部署到分站時可能會讓 CSS / JS 從網站根目錄 `/assets/` 載入，造成 404。
 
+給其他 AI 或 Codex 使用時，可明確要求：
+
+```txt
+請讀取這個 repo 作為 skill 文件，使用 ai-web-package-react，並套用 ai-web-package-react-iis profile。IIS 部署請使用 base: './'，避免分站部署時 /assets 404。
+```
+
 ## Gemini AI 設定
 
 AI 客服與 AI 行程規劃會讀取：

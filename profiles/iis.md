@@ -52,13 +52,39 @@ dist/
 
 ## Vite 設定
 
-如果部署在網站根目錄：
+### 重要備註：IIS 預設使用相對資源路徑
 
-```txt
-https://example.com/
+請讀取這個 repo 作為 skill 文件，使用 `ai-web-package-react`，並套用 `ai-web-package-react-iis` profile。IIS 部署請優先使用 `base: './'`，避免分站、子應用程式或虛擬目錄部署時 `/assets` 404。
+
+除非使用者明確指定網站一定部署在固定根目錄，否則 IIS profile 預設使用：
+
+```js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  base: './',
+})
 ```
 
-使用：
+這會讓建置後的 `index.html` 使用：
+
+```txt
+./assets/index-xxxxx.js
+./assets/index-xxxxx.css
+```
+
+而不是：
+
+```txt
+/assets/index-xxxxx.js
+/assets/index-xxxxx.css
+```
+
+> 繁體中文註解：IIS 常見部署方式是建立分站、Application 或 Virtual Directory。若使用 `base: '/'`，CSS、JS、圖片會從 IIS 網站根目錄 `/assets/` 載入，分站部署時很容易 404。因此本 Profile 預設採用 `base: './'`。
+
+如果使用者明確指定部署在網站根目錄，且確定所有資源都要從 domain root 載入，才可使用：
 
 ```js
 import { defineConfig } from 'vite'
@@ -70,25 +96,19 @@ export default defineConfig({
 })
 ```
 
-如果部署在子目錄：
+如果使用者明確指定固定子路徑，例如：
 
 ```txt
 https://example.com/my-app/
 ```
 
-使用：
+也可以使用：
 
 ```js
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-  base: '/my-app/',
-})
+base: '/my-app/',
 ```
 
-> 繁體中文註解：IIS 部署在子目錄時，Vite 的 `base` 一定要正確，不然 CSS、JS、圖片會載入失敗。
+但在未確認部署路徑前，請不要主動使用固定絕對路徑。
 
 ---
 
@@ -108,7 +128,7 @@ export default defineConfig({
             <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
             <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
           </conditions>
-          <action type="Rewrite" url="/index.html" />
+          <action type="Rewrite" url="index.html" />
         </rule>
       </rules>
     </rewrite>
