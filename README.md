@@ -77,6 +77,18 @@ IIS：
 - 預設使用 React + Vite
 - 不主動加入 backend、database、authentication
 - 不主動改成 Next.js
-- 不主動重設計 UI
+- 不主動重新設計 UI
 - 優先保留原始畫面與互動邏輯
 - IIS 與 Zeabur 差異透過 profile 處理
+
+## IIS 入口正規化
+
+套用 `ai-web-package-react-iis` profile 時，需特別注意 IIS default document。正式部署目錄的首頁應該能透過 `index.html` 啟動。
+
+因此轉換時要先判斷原始專案的真正入口檔：
+
+- 如果入口是 `index.html`，正常保留即可。
+- 如果入口是 `game.html`、`home.html`、`main.html` 或使用者指定的其他 HTML，build 後必須讓 `dist/index.html` 等同正式入口內容。
+- 對大型單檔 AI 原型，可保留原始入口到 `public/{entry}.html`，再用 postbuild 腳本複製成 `dist/index.html`。
+
+這可以避免正式站部署到 IIS 子目錄後，開啟資料夾網址時只看到錯誤頁、空白頁或 React 外殼，而不是實際遊戲或頁面。
