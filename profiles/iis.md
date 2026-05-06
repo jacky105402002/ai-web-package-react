@@ -46,7 +46,7 @@ web.config
 dist/
 ```
 
-如果部署時只複製 `dist/` 到 IIS，則 `web.config` 也應放進 `dist/`。
+如果部署時只複製 `dist/` 到 IIS，則 `web.config` 也應放進 `dist/`。可將 `web.config` 放在 `public/web.config`，讓 Vite build 自動複製到 `dist/web.config`。
 
 ---
 
@@ -87,13 +87,7 @@ export default defineConfig({
 如果使用者明確指定部署在網站根目錄，且確定所有資源都要從 domain root 載入，才可使用：
 
 ```js
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-  base: '/',
-})
+base: '/',
 ```
 
 如果使用者明確指定固定子路徑，例如：
@@ -112,9 +106,60 @@ base: '/my-app/',
 
 ---
 
+## IIS 首頁入口正規化
+
+IIS 的預設文件通常是 `index.html`、`default.htm` 或 `default.aspx`。因此套用 IIS profile 時，必須確認正式部署目錄的首頁入口是 `dist/index.html`。
+
+Codex 應在初始檢查時判斷原始專案真正入口，例如：
+
+- `index.html`
+- `game.html`
+- `home.html`
+- `main.html`
+- 使用者指定的其他 HTML 檔
+
+處理規則：
+
+- 如果來源入口已經是 `index.html`，保持 `dist/index.html` 為正式首頁。
+- 如果來源入口不是 `index.html`，例如 `game.html`，建置後必須讓 `dist/index.html` 指向或等同該入口內容。
+- 對高度依賴原生 DOM、inline CSS、inline JavaScript 的大型 AI 原型，可先將原始入口保留到 `public/{entry}.html`，再用 build 後處理把 `dist/{entry}.html` 複製成 `dist/index.html`。
+- 若使用 React/Vite 外殼承載原始頁面，仍要確認 IIS 正式首頁不會因 iframe、路徑或 default document 設定而空白。
+
+建議 postbuild 腳本範例：
+
+```js
+const fs = require('node:fs')
+const path = require('node:path')
+
+const distDir = path.resolve(__dirname, '..', 'dist')
+const entryHtml = path.join(distDir, 'game.html')
+const indexHtml = path.join(distDir, 'index.html')
+
+if (!fs.existsSync(entryHtml)) {
+  throw new Error(`Missing ${entryHtml}. Run vite build before this script.`)
+}
+
+fs.copyFileSync(entryHtml, indexHtml)
+console.log('Copied dist/game.html to dist/index.html for IIS default document.')
+```
+
+`package.json` 可搭配：
+
+```json
+{
+  "scripts": {
+    "build": "vite build && node scripts/use-entry-as-index.cjs"
+  }
+}
+```
+
+> 繁體中文註解：不要假設原始 AI 原型的入口一定叫 `index.html`。只要正式站網址是資料夾路徑，例如 `https://example.com/my-app/`，IIS 通常會先找 `index.html`。如果真正入口是 `game.html`，就應在 build 流程中自動正規化，避免部署後首頁空白或出現錯誤。
+
+---
+
 ## IIS SPA Fallback
 
-如果 React 專案使用 React Router 或其他前端路由，需加入：
+如果 React 專案使用 React Router 或其他前端路由，需要加入：
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -174,7 +219,9 @@ C:\inetpub\wwwroot\my-app
 
 部署後需確認：
 
-- 首頁可以正常開啟
+- 首頁資料夾網址可以正常開啟，例如 `/my-app/`
+- `dist/index.html` 是正式首頁入口
+- 如果原始入口不是 `index.html`，已完成入口正規化
 - CSS 正常載入
 - JavaScript 正常載入
 - 圖片正常載入
@@ -209,3 +256,17 @@ C:\inetpub\wwwroot\my-app
 
 - IIS MIME type 未設定
 - `web.config` 沒有補上對應 mimeMap
+
+### 4. 直接開 `/my-app/` 空白或顯示外殼錯誤
+
+可能原因：
+
+- 真正入口是 `game.html`、`home.html` 等非 `index.html` 檔案
+- `dist/index.html` 不是正式首頁內容
+- React 外殼 iframe 指向錯誤路徑
+- IIS Default Document 沒有包含實際入口檔
+
+處理方式：
+
+- 優先讓 build 後的 `dist/index.html` 等同正式入口內容
+- 若保留原入口檔，仍可同時輸出 `dist/game.html`，但資料夾網址必須能由 `dist/index.html` 正常啟動
